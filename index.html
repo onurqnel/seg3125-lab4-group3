@@ -163,8 +163,10 @@
       </div>
 
       <div class="form-row">
-        <label for="phone">Phone Number</label>
-        <input type="tel" id="phone" name="phone" placeholder="(...) 000-0000" required>
+        <label for="phone">Phone Number
+        <input type="tel" id="phone" name="phone" placeholder="(###) ###-####" pattern="\(\d{3}\)+\d{3}-\d{4}" required />
+        
+        </label>
       </div>
     </div>
 
