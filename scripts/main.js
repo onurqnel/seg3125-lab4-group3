@@ -94,3 +94,80 @@ timeSelect.disabled = false;
   });
 });
 
+document.getElementById('phone').addEventListener('input', function () {
+  const digits = this.value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) {
+    this.value = digits;
+  } else if (digits.length <= 6) {
+    this.value = `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+  } else {
+    this.value = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+  }
+});
+
+document.querySelector('.booking-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  let valid = true;
+
+  // --- Full Name ---
+  const nameInput = document.getElementById('fullName');
+  const nameParts = nameInput.value.trim().split(/\s+/);
+  if (nameParts.length < 2 || nameParts.some(p => p.length < 1)) {
+    showError(nameInput, 'Please enter your first and last name.');
+    valid = false;
+  } else {
+    clearError(nameInput);
+  }
+
+  // --- Phone ---
+  const phoneInput = document.getElementById('phone');
+  const digitsOnly = phoneInput.value.replace(/\D/g, '');
+  if (digitsOnly.length !== 10) {
+    showError(phoneInput, 'Phone number must be exactly 10 digits.');
+    valid = false;
+  } else {
+    clearError(phoneInput);
+  }
+
+  // --- Email ---
+  const emailInput = document.getElementById('email');
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailInput.value.trim())) {
+    showError(emailInput, 'Please enter a valid email address.');
+    valid = false;
+  } else {
+    clearError(emailInput);
+  }
+
+  // --- Date: must not be in the past ---
+  const dateInput = document.getElementById('date');
+  const today = new Date().toISOString().split('T')[0];
+  if (!dateInput.value || dateInput.value < today) {
+    showError(dateInput, 'Please select a future date.');
+    valid = false;
+  } else {
+    clearError(dateInput);
+  }
+
+  if (valid) {
+    // form is good — submit or show success message
+    alert('Booking submitted successfully!');
+    this.reset();
+  }
+});
+
+function showError(input, message) {
+  clearError(input); // avoid duplicates
+  input.style.borderColor = 'red';
+  const error = document.createElement('span');
+  error.className = 'error-msg';
+  error.style.cssText = 'color:red; font-size:0.8rem; display:block; margin-top:4px;';
+  error.textContent = message;
+  input.parentNode.appendChild(error);
+}
+
+function clearError(input) {
+  input.style.borderColor = '';
+  const existing = input.parentNode.querySelector('.error-msg');
+  if (existing) existing.remove();
+}
