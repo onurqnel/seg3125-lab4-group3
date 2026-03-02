@@ -50,6 +50,52 @@ document.addEventListener("DOMContentLoaded", () => {
     this.value = this.value.replace(/\D/g, '').slice(0, 4);
   });
 
+  // ── Date Picker (Flatpickr) ──────────────────────────────────────────────
+  const dateInputEl = document.getElementById('date');
+  const stylistSelect = document.getElementById('stylist');
+
+  // Off-days setup (0 = Sun, 1 = Mon, ..., 6 = Sat)
+  const stylistOffDays = {
+    'Tina': [1],        // Tina is off on Mondays
+    'Daniella': [2],    // Daniella is off on Tuesdays
+    'Laura': [3]        // Laura is off on Wednesdays
+  };
+
+  const fp = flatpickr(dateInputEl, {
+    minDate: "today",
+    disable: [
+      function (date) {
+        // Disable weekends
+        const day = date.getDay();
+        if (day === 0 || day === 6) {
+          return true;
+        }
+
+        // Disable specific stylist's off-days
+        const selectedStylist = stylistSelect.value;
+        if (selectedStylist && stylistOffDays[selectedStylist]) {
+          return stylistOffDays[selectedStylist].includes(day);
+        }
+
+        return false;
+      }
+    ]
+  });
+
+  // Update flatpickr when the stylist changes
+  stylistSelect.addEventListener('change', function () {
+    fp.redraw();
+
+    // Clear selection if now disabled
+    if (fp.selectedDates.length > 0) {
+      const selectedDay = fp.selectedDates[0].getDay();
+      const currentStylist = this.value;
+      if (stylistOffDays[currentStylist] && stylistOffDays[currentStylist].includes(selectedDay)) {
+        fp.clear();
+      }
+    }
+  });
+
   // ── Booking form ─────────────────────────────────────────────────────────
   // Store booking summary to use later in confirmation
   let bookingSummary = {};
@@ -88,20 +134,45 @@ document.addEventListener("DOMContentLoaded", () => {
       clearError(emailInput);
     }
 
-    // Date
+    // Date & Time
     const dateInput = document.getElementById('date');
+    const timeInput = document.getElementById('time');
     const today = new Date().toISOString().split('T')[0];
+
     if (!dateInput.value || dateInput.value < today) {
       showError(dateInput, 'Please select a valid future date.');
       valid = false;
     } else {
       const selected = new Date(dateInput.value + 'T00:00:00');
       const day = selected.getDay();
-      if (day === 0 || day === 6) {
-        showError(dateInput, 'We are closed on weekends. Please select a weekday.');
+
+      if (day === 0) {
+        showError(dateInput, 'We are closed on Sundays.');
         valid = false;
       } else {
         clearError(dateInput);
+        if (timeInput && timeInput.value) {
+          const timeHour = parseInt(timeInput.value.split(':')[0], 10);
+          const timeMin = parseInt(timeInput.value.split(':')[1], 10);
+
+          if (day === 6) {
+            // Sat: 10am - 5pm
+            if (timeHour < 10 || timeHour > 17 || (timeHour === 17 && timeMin > 0)) {
+              showError(timeInput, 'Saturday hours: 10:00 AM - 5:00 PM');
+              valid = false;
+            } else {
+              clearError(timeInput);
+            }
+          } else {
+            // Mon - Fri: 9am - 6pm
+            if (timeHour < 9 || timeHour > 18 || (timeHour === 18 && timeMin > 0)) {
+              showError(timeInput, 'Weekday hours: 9:00 AM - 6:00 PM');
+              valid = false;
+            } else {
+              clearError(timeInput);
+            }
+          }
+        }
       }
     }
 
@@ -109,13 +180,23 @@ document.addEventListener("DOMContentLoaded", () => {
       // Save summary for confirmation screen
       const stylistVal = document.getElementById('stylist').value;
       const serviceVal = document.getElementById('service').value;
+
+      let formattedTime = '';
+      if (timeInput && timeInput.value) {
+        let [hh, mm] = timeInput.value.split(':');
+        let hour = parseInt(hh, 10);
+        let ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        formattedTime = ` at ${hour}:${mm} ${ampm}`;
+      }
+
       bookingSummary = {
         name: nameInput.value.trim(),
         phone: phoneInput.value.trim(),
         email: emailInput.value.trim(),
         service: serviceVal || 'Not selected',
         stylist: stylistVal || 'No preference',
-        date: dateInput.value
+        date: dateInput.value + formattedTime
       };
 
       // Hide booking, show payment
